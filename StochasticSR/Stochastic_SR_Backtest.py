@@ -55,17 +55,9 @@ class StochasticSR(bt.Strategy):
             if order.isbuy():
                 self.log('BUY -- units: 10000  price: {}  value: {}  comm: {}'.format(order.executed.price, order.executed.value, order.executed.comm))
                 self.price = order.executed.price
-                # stop loss order for max loss of self.params.stop_pips pips
-                self.stop_price = self.close(exectype=bt.Order.StopLimit, price=order.executed.price-self.params.stop_pips, oco=self.stop_donchian)
-                # stop loss order for donchian SR price level
-                self.stop_donchian = self.close(exectype=bt.Order.StopLimit, price=self.donchian_stop_price, oco=self.stop_price)
             elif order.issell():
                 self.log('SELL -- units: 10000  price: {}  value: {}  comm: {}'.format(order.executed.price, order.executed.value, order.executed.comm))
                 self.price = order.executed.price
-                # stop loss order for max loss of self.params.stop_pips pips
-                self.stop_price = self.close(exectype=bt.Order.StopLimit, price=order.executed.price+self.params.stop_pips, oco=self.stop_donchian)
-                # stop loss order for donchian SR price level
-                self.stop_donchian = self.close(exectype=bt.Order.StopLimit, price=self.donchian_stop_price, oco=self.stop_price)
         elif order.status in [order.Rejected, order.Margin]:
             self.log('Order rejected/margin')
         
@@ -88,11 +80,19 @@ class StochasticSR(bt.Strategy):
                 # stop price at last support level in self.params.period periods
                 self.donchian_stop_price = max(self.data.high.get(size=self.params.period))
                 self.order = self.sell()
+                # stop loss order for max loss of self.params.stop_pips pips
+                self.stop_price = self.buy(exectype=bt.Order.Stop, price=self.data.close[0]+self.params.stop_pips, oco=self.stop_donchian)
+                # stop loss order for donchian SR price level
+                self.stop_donchian = self.buy(exectype=bt.Order.Stop, price=self.donchian_stop_price, oco=self.stop_price)
             # when stochastic crosses back above 20, enter long position.
             elif self.stochastic.lines.percD[-1] <= 20 and self.stochastic.lines.percD[0] >= 20:
                 # stop price at last resistance level in self.params.period periods
                 self.donchian_stop_price = min(self.data.low.get(size=self.params.period))
-                self.order = self.buy() 
+                self.order = self.buy()
+                # stop loss order for max loss of self.params.stop_pips pips
+                self.stop_price = self.sell(exectype=bt.Order.Stop, price=self.data.close[0]-self.params.stop_pips, oco=self.stop_donchian)
+                # stop loss order for donchian SR price level
+                self.stop_donchian = self.sell(exectype=bt.Order.Stop, price=self.donchian_stop_price, oco=self.stop_price) 
   
         if self.position.size > 0:
             # When stochastic is above 70, close out of long position
