@@ -1,0 +1,3 @@
+When price moves X std dev above or below Moving Average, wait for cross back towards mean, and if ADX is below X, enter 
+	TP at the Moving Average retracement level
+	SL at BB value on entry
